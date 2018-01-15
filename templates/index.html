@@ -1,0 +1,19 @@
+{% extends "master.html" %}
+{% block content %}
+<div class="title">
+	<h2>Select environment</h2>
+	<span class="byline">Environments are taken from https://docs.greenitglobe.com</span>
+</div>
+<ul>
+	{% for org, repos in orgs.items() %}
+	<li>
+		<h3>{{ org }}</h3>
+		<ul class="sublist">
+			{% for repo in repos %}
+			<li><a href="/manage/{{ org }}/{{ repo }}">{{ repo }}</a></li>
+			{% endfor %}
+		</ul>
+	</li>
+	{% endfor %}
+</ul>
+{% endblock %}

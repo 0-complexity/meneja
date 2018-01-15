@@ -1,0 +1,37 @@
+{% extends "master.html" %}
+{% block content %}
+<div class="title">
+	<h2>{{ org }}/{{ env }}</h2>
+	<span class="byline">Environments are taken from https://docs.greenitglobe.com</span>
+</div>
+<a href="/download/controller/usbinstall/{{ org }}/{{ env }}">Download usb installer image</a><br><br>
+<button id="save">Edit configuration</button> <button id="validate">Validate configuration</button> <span id="validation_result"></span>
+<div id="editor">{{ config }}</div>
+<script src="/ace/ace.js" type="text/javascript" charset="utf-8"></script>
+<script type="text/javascript">
+	var editor = ace.edit("editor");
+	editor.setTheme("ace/theme/github");
+	editor.getSession().setMode("ace/mode/yaml");
+	var save = document.getElementById('save');
+	var validate = document.getElementById('validate');
+	var validation_result = document.getElementById('validation_result');
+	save.onclick = function () {
+		window.open('https://docs.greenitglobe.com/{{org}}/{{env}}/_edit/master/system-config.yaml', '_blank');
+	};
+	validate.onclick = function () {
+		var xhttp = new XMLHttpRequest();
+		xhttp.onreadystatechange = function() {
+			if (this.readyState == 4 && this.status == 200) {
+				var result = JSON.parse(this.responseText);
+				if ( result.result == "ok") {
+					validation_result.innerHTML = "The configuration is valid!";
+				} else {
+					validation_result.innerHTML = "The configuration is invalid: " + result.error;
+				}
+			}
+		};
+		xhttp.open("GET", "/validate/{{org}}/{{env}}", true);
+		xhttp.send();
+	};
+</script>
+{% endblock %}

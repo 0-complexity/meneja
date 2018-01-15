@@ -1,0 +1,6 @@
+flask==0.12.2
+requests==2.18.4
+pyyaml==3.10
+pycdlib==1.3.2
+pycrypto==2.6.1
+jsonschema==2.6.0
