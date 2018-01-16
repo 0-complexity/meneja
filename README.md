@@ -15,7 +15,7 @@ Generate controller usb installer image
 positional arguments:
   host           ip address to listen for requests
   port           port to listen for requests
-  uri            Public uri this server will be listening
+  uri            Public callback uri for itsyou.online to this server
   organization   Itsyou.Online organization
   client_secret  Itsyou.Online client secret
   gitea          Url to gitea server

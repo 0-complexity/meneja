@@ -354,7 +354,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate controller usb installer image')   # pylint: disable=C0103
     parser.add_argument('host', type=str, help='ip address to listen for requests')
     parser.add_argument('port', type=int, help='port to listen for requests')
-    parser.add_argument('uri', type=str, help='Public uri this server will be listening')
+    parser.add_argument('uri', type=str, help='Public callback uri for itsyou.online to this server')
     parser.add_argument('organization', type=str, help='Itsyou.Online organization')
     parser.add_argument('client_secret', type=str, help='Itsyou.Online client secret')
     parser.add_argument('gitea', type=str, help='Url to gitea server')
