@@ -110,6 +110,9 @@ def environments():
     Renders home page
     """
     def make_gitea_call(uri, headers, params=None):
+        """
+        small method that addes uri's to the gitea base url and returns the json format of the reponse data.
+        """
         url = "%s/api/v1/%s" % (app.config['args'].gitea, uri)
         response = requests.get(url, headers=headers, params=params)
         response.raise_for_status()
