@@ -109,15 +109,31 @@ def environments():
     """
     Renders home page
     """
+    def make_gitea_call(uri, headers, params=None):
+        url = "%s/api/v1/%s" % (app.config['args'].gitea, uri)
+        response = requests.get(url, headers=headers, params=params)
+        response.raise_for_status()
+        return response.json()
+
+    repos = []
     # Get repos
     gitea_token = get_gitea_token()
     headers = dict(Authorization="token %s" % gitea_token)
-    url = "%s/api/v1/user/repos" % app.config['args'].gitea
+    # get user id to pass to search request
+    uid = make_gitea_call('user/', headers)["id"]
+    # paginate search repos to get all user repos as /user/repo cannot load itsyouonline repos
+    url = "%s/api/v1/repos/search" % app.config['args'].gitea
     orgs = defaultdict(list)
-    response = requests.get(url, headers=headers)
-    response.raise_for_status()
-    result = response.json()
-    for repo in result:
+    page = 1
+    while True:
+        result = make_gitea_call('repos/search', headers=headers, params={'uid': uid, 'limit': 50, 'page': page})
+        if not result['data']:
+            break
+        page += 1
+        repos += result['data']
+    # search all repos for the env_ syntax
+    for repo in repos:
+        print(repo["name"])
         if not REPO.match(repo["name"]):
             continue
         orgs[repo["owner"]["username"]].append(repo["name"])
