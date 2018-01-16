@@ -143,6 +143,16 @@ def environments():
     return jsonify(orgs)
 
 
+@app.route("/environment/<org>/<env>/config", methods=["GET"])
+@authenticated
+def environment_config(org, env):
+    """
+    return system-config yaml
+    """
+    config = _get_config(org, env)
+    return jsonify(config)
+
+
 @app.route("/manage/<org>/<env>", methods=["GET"])
 @authenticated
 def manage(org, env):
