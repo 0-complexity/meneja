@@ -1,4 +1,4 @@
-# kusimamia
+# Meneja
 OpenvCloud environment manager
 
 # installation
@@ -6,7 +6,7 @@ via Dockerfile
 
 # arguments
 ```bash
-usage: kusimamia.py [-h]
+usage: meneja.py [-h]
                     host port uri organization client_secret gitea
                     iso_template
 

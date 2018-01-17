@@ -7,4 +7,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install --no-cache-dir netaddr pyjwt
 
 
-ENTRYPOINT ["python", "./kusimamia.py"]
+ENTRYPOINT ["python", "./meneja.py"]
