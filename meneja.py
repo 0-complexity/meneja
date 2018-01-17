@@ -332,6 +332,8 @@ def generate_image(config):
         script.write(b'PUBVLAN=%s\n' % str(config['network']['public']['vlan']).encode())
         script.write(b'MGMTIP=%s\n' % construct_ip(config['network']['management']['network'],
                                                    controller['ip-lsb']))
+        script.write(b'IPMIIP=%s\n' % construct_ip(config['network']['ipmi']['network'],
+                                                   controller['ip-lsb']))
         script.write(b'STORIP=%s\n' % construct_ip(config['network']['storage']['network'],
                                                    controller['ip-lsb']))
         script.write(b'UNTAGIP=%s\n' % construct_ip(config['network']['backplane']['network'],
