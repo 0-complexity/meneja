@@ -313,10 +313,6 @@ def generate_image(config):
     for controller in config['controller']['hosts']:
         # Add function to create directories
         script = BytesIO()
-        script.write(b'function create_dirs() {\n')
-        for directory in config['controller']['directories']:
-            script.write(b'    mkdir -p %s\n' % directory.encode())
-        script.write(b'}\n\n')
 
         # Add environment information
         script.write(b'HOSTNAME=%s\n' % controller['hostname'].encode())
