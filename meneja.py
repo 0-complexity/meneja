@@ -288,9 +288,9 @@ def add_file(iso, filename, contents):
         try:
             iso.get_entry(path)
         except pycdlib.pycdlibexception.PyCdlibInvalidInput:
-            iso.add_directory(path.upper().replace('-', ''), rr_name=part)
+            iso.add_directory(path.upper().replace('-', ''), rr_name=part, joliet_path=path)
     iso.add_fp(contents, len(contents.getvalue()), '%s.;1' % filename.upper().replace('-', ''),
-               rr_name=os.path.basename(filename))
+               rr_name=os.path.basename(filename), joliet_path=filename)
 
 
 def construct_ip(cidr, lsb):
