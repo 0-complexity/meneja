@@ -1,0 +1,66 @@
+{% extends "master.html" %}
+{% block content %}
+<div class="title">
+	<h2>Installers</h2>
+	<span class="byline">To invoke an installation you'll need an authentication key.</span>
+</div>
+<div>
+    <h3>Select download type:</h3>
+    <ul>
+        <li><input id="auth_token" type="radio" name="type" checked><label for="auth_token">Authorization token</label></li>
+        <li><input id="auth_usb_key" type="radio" name="type"><label for="auth_usb_key">Authorization usb key image</label></li>
+        <li><input id="911boot" type="radio" name="type"><label for="911boot">911 boot / generic installer image</label></li>
+    </ul>
+</div>
+<div>
+    <h3>Enter password to protect the authentication key</h3>
+    <form id="form" method="post" class="input">
+        <div>
+            <label for="pwd">Password:</label>
+            <input id="pwd" name="pwd" type="password">
+        </div>
+        <div>
+            <label for="confpwd">Confirm password:</label>
+            <input id="confpwd" name="confpwd" type="password">
+        </div>
+        <button id="download" type="button">Download</button> <span id="errormessage"></span>
+    </form>    
+</div>
+<script type="text/javascript">
+var pwd = document.getElementById('pwd');
+var confpwd = document.getElementById('confpwd');
+var errormessage = document.getElementById('errormessage');
+var form = document.getElementById("form");
+var auth_token = document.getElementById("auth_token");
+var auth_usb_key = document.getElementById("auth_usb_key");
+var nine_eleven_boot = document.getElementById("911boot");
+document.getElementById("download").addEventListener("click", function () {
+    var checks = {
+        'Need at least two uppercase characters': /^.*[A-Z].*[A-Z].*$/,
+        'Need at least two digits': /^.*[0-9].*[0-9].*$/,
+        'Need at least three lowercase letters': /^.*[a-z].*[a-z].*[a-z].*$/,
+        'Password must be at least 8 characters': /^.{8}.*$/
+    };
+    for (var error in checks) {
+        if (!checks[error].test(pwd.value)) {
+            errormessage.innerText = error;
+            return false;
+        }
+    }
+    if (pwd.value != confpwd.value) {
+        errormessage.innerText = "Passwords do not match!";
+        return false;
+    }
+    errormessage.innerText = "";
+    if (auth_token.checked) {
+        form.action = "/download/authtoken";
+    } else if (auth_usb_key.checked) {
+        form.action = "/download/authkey";
+    } else if (nine_eleven_boot.checked) {
+        form.action = "/download/911";
+    } else 
+        return;
+    form.submit();
+});
+</script>
+{% endblock %}

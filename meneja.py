@@ -68,13 +68,24 @@ def index():
     return render_template('index.html', orgs=orgs, menu=Menu("Home"))
 
 
-@app.route("/authkey", methods=["GET"])
+@app.route("/downloads", methods=["GET"])
 @authenticated
 def authkey():
     """
     Renders authentication key page
     """
-    return render_template('authenticationkey.html', menu=Menu("Authentication key"))
+    return render_template('downloads.html', menu=Menu("Downloads"))
+
+
+@app.route("/download/authtoken", methods=["POST"])
+@authenticated
+def downloadtoken():
+    """
+    Generates download of auth token
+    """
+    payload = _generate_auth_token()
+    return send_file(BytesIO(payload), as_attachment=True, attachment_filename="%s-token" % \
+        session['iyo_user_info']['username'])
 
 
 @app.route("/download/authkey", methods=["POST"])
@@ -83,14 +94,7 @@ def downloadauthkey():
     """
     Generates download of iso image with auth key
     """
-    pad = lambda s: s.ljust(len(s) + 16 - len(s) % 16)
-    jwt = pad(session['iyo_jwt'].encode("utf8"))
-    password = pad(request.form["pwd"].encode("utf8"))
-
-    cipher = AES.new(password, AES.MODE_ECB)
-    encoded_jwt = cipher.encrypt(jwt)
-    signature = hmac.new(password, encoded_jwt).digest()
-    payload = signature + encoded_jwt
+    payload = _generate_auth_token()
 
     iso = pycdlib.PyCdlib()
     iso.new(joliet=3)
@@ -101,6 +105,39 @@ def downloadauthkey():
     buf.seek(0)
     return send_file(buf, as_attachment=True, attachment_filename="%s-key.iso" % \
         session['iyo_user_info']['username'])
+
+
+@app.route("/download/911", methods=["POST"])
+@authenticated
+def download911():
+    """
+    Generates download of iso image with auth key
+    """
+    payload = _generate_auth_token()
+
+    # Generate files
+    files = {"/etc/jwt": BytesIO(payload)}
+    iso_filename = tempfile.mktemp()
+    @after_this_request
+    def _remove_file(response):
+        if os.path.exists(iso_filename):
+            os.remove(iso_filename)
+        return response
+    _generate_iso(files, iso_filename)
+    return send_file(iso_filename, as_attachment=True, attachment_filename="911boot-%s.iso" % \
+        session['iyo_user_info']['username'])
+
+
+def _generate_auth_token():
+    pad = lambda s: s.ljust(len(s) + 16 - len(s) % 16)
+    jwt = pad(session['iyo_jwt'].encode("utf8"))
+    password = pad(request.form["pwd"].encode("utf8"))
+
+    cipher = AES.new(password, AES.MODE_ECB)
+    encoded_jwt = cipher.encrypt(jwt)
+    signature = hmac.new(password, encoded_jwt).digest()
+    payload = signature + encoded_jwt
+    return payload
 
 
 @app.route("/environments", methods=["GET"])
@@ -244,13 +281,18 @@ def download(org, env):
         response.raise_for_status()
         config = yaml.load(response.content)
     # Generate files
+    files = generate_image(config)
     iso_filename = tempfile.mktemp()
     @after_this_request
     def _remove_file(response):
         if os.path.exists(iso_filename):
             os.remove(iso_filename)
         return response
-    files = generate_image(config)
+    _generate_iso(files, iso_filename)
+    return send_file(iso_filename, as_attachment=True, attachment_filename="%s.%s.iso" % (org, env))
+
+
+def _generate_iso(files, iso_filename):
     iso = pycdlib.PyCdlib()
     iso.open(args.iso_template)
     try:
@@ -259,7 +301,6 @@ def download(org, env):
         iso.write(iso_filename)
     finally:
         iso.close()
-    return send_file(iso_filename, as_attachment=True, attachment_filename="%s.%s.iso" % (org, env))
 
 
 def get_gitea_token():
@@ -334,6 +375,7 @@ def generate_image(config):
                                                    controller['ip-lsb']))
         script.write(b'UNTAGIP=%s\n' % construct_ip(config['network']['backplane']['network'],
                                                     controller['ip-lsb']))
+        script.write(b'GIG_PWD=%s\n' % str(config['environment']['password']).encode())
         count += 1
         scripts['/etc/ctrl-0%s' % count] = script
     scripts['/etc/id_rsa'] = BytesIO(config['ssh']['private-key'].encode())
@@ -347,7 +389,7 @@ class Menu():  # pylint: disable=R0903
     current = "not set"
     items = [
         dict(name="Home", url="/"),
-        dict(name="Authentication key", url="/authkey")
+        dict(name="Downloads", url="/downloads")
     ]
 
     def __init__(self, current):
