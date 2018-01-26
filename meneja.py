@@ -5,7 +5,7 @@ which he can boot and install the os on the 3 controller nodes.
 """
 import os
 import tempfile
-from io import BytesIO
+from io import BytesIO, StringIO
 from collections import defaultdict
 import re
 import tarfile
@@ -20,6 +20,7 @@ import yaml
 import pycdlib
 from Crypto.Cipher import AES
 import jsonschema
+import paramiko
 
 
 REPO = re.compile("^env_.*")
@@ -330,7 +331,7 @@ def add_file(iso, filename, contents):
             iso.get_entry(path)
         except pycdlib.pycdlibexception.PyCdlibInvalidInput:
             iso.add_directory(path.upper().replace('-', ''), rr_name=part, joliet_path=path)
-    iso.add_fp(contents, len(contents.getvalue()), '%s.;1' % filename.upper().replace('-', ''),
+    iso.add_fp(contents, len(contents.getvalue()), '%s.;1' % filename.upper().replace('-', '').replace('.',''),
                rr_name=os.path.basename(filename), joliet_path=filename)
 
 
@@ -378,7 +379,11 @@ def generate_image(config):
         script.write(b'GIG_PWD=%s\n' % str(config['environment']['password']).encode())
         count += 1
         scripts['/etc/ctrl-0%s' % count] = script
-    scripts['/etc/id_rsa'] = BytesIO(config['ssh']['private-key'].encode())
+    pk = config['ssh']['private-key'].strip()
+    buf = StringIO(pk)
+    buf.seek(0)
+    k = paramiko.RSAKey.from_private_key(buf)
+    scripts['/etc/id_rsa.pub'] = BytesIO(k.get_base64().encode())
     return scripts
 
 
