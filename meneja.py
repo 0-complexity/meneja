@@ -376,7 +376,7 @@ def generate_image(config):
                                                    controller['ip-lsb']))
         script.write(b'UNTAGIP=%s\n' % construct_ip(config['network']['backplane']['network'],
                                                     controller['ip-lsb']))
-        script.write(b'GIG_PWD=%s\n' % str(config['environment']['password']).encode())
+        script.write(b'GIGPWD=%s\n' % str(config['environment']['password']).encode())
         count += 1
         scripts['/etc/ctrl-0%s' % count] = script
     pk = config['ssh']['private-key'].strip()
