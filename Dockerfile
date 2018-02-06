@@ -1,5 +1,10 @@
 FROM python:3
 
+RUN DEBIAN_FRONTEND=noninteractive apt-get update
+RUN DEBIAN_FRONTEND=noninteractive apt-get -y install genisoimage isolinux \
+    syslinux syslinux-utils
+
+
 WORKDIR /usr/src/app
 
 COPY . .
