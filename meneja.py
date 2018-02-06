@@ -5,6 +5,7 @@ which he can boot and install the os on the 3 controller nodes.
 """
 import os
 import tempfile
+import subprocess
 from io import BytesIO, StringIO
 from collections import defaultdict
 import re
@@ -21,9 +22,11 @@ import pycdlib
 from Crypto.Cipher import AES
 import jsonschema
 import paramiko
+import threading
 
 
 REPO = re.compile("^env_.*")
+GENERATE_LOCK = threading.Lock()
 
 
 app = flask.Flask(__name__, static_url_path='')  # pylint: disable=C0103
@@ -294,14 +297,23 @@ def download(org, env):
 
 
 def _generate_iso(files, iso_filename):
-    iso = pycdlib.PyCdlib()
-    iso.open(args.iso_template)
-    try:
-        for filename, contents in files.items():
-            add_file(iso, filename, contents)
-        iso.write(iso_filename)
-    finally:
-        iso.close()
+    with GENERATE_LOCK:
+        try:
+            for filename, contents in files.items():
+                target_filename = "%s%s" % (app.config['args'].iso_template, filename)
+                dir_name = os.path.dirname(target_filename)
+                os.makedirs(dir_name, exist_ok=True)
+                with open(target_filename, 'wb') as fileh:
+                    fileh.write(contents.getvalue())
+            result = subprocess.run(["./mkiso", iso_filename], cwd=app.config['args'].iso_template,
+                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if result.returncode != 0:
+                raise RuntimeError("Failed to build iso!\n%s\n%s" % (result.stdout, result.stderr))
+        finally:
+            for filename, contents in files.items():
+                target_filename = "%s%s" % (app.config['args'].iso_template, filename)
+                if os.path.exists(target_filename):
+                    os.remove(target_filename)
 
 
 def get_gitea_token():
@@ -330,9 +342,9 @@ def add_file(iso, filename, contents):
         try:
             iso.get_entry(path)
         except pycdlib.pycdlibexception.PyCdlibInvalidInput:
-            iso.add_directory(path.upper().replace('-', ''), rr_name=part, joliet_path=path)
+            iso.add_directory(path.upper().replace('-', ''), rr_name=part)
     iso.add_fp(contents, len(contents.getvalue()), '%s.;1' % filename.upper().replace('-', '').replace('.',''),
-               rr_name=os.path.basename(filename), joliet_path=filename)
+               rr_name=os.path.basename(filename))
 
 
 def construct_ip(cidr, lsb):
@@ -413,6 +425,6 @@ if __name__ == '__main__':
     parser.add_argument('organization', type=str, help='Itsyou.Online organization')
     parser.add_argument('client_secret', type=str, help='Itsyou.Online client secret')
     parser.add_argument('gitea', type=str, help='Url to gitea server')
-    parser.add_argument('iso_template', type=str, help='Path to iso template')
+    parser.add_argument('iso_template', type=str, help='Path to iso template generation dir')
     args = parser.parse_args()  # pylint: disable=C0103
     run(args)

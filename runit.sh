@@ -5,4 +5,4 @@ docker run -d --rm --net=host  \
 	--name meneja meneja:latest  \
 	0.0.0.0 8080 https://meneja.gig.tech/callback  greenitglobe.team.operations \
 	CvCJ6jm6ZZXwLwz3qWOWNsoUnN8yKEcP0KOFYZycIlJSaLhkAWal \
-	https://docs.greenitglobe.com /911builder/GIGINSTALLER.iso
+	https://docs.greenitglobe.com /911builder
