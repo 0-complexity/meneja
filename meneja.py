@@ -395,7 +395,7 @@ def generate_image(config):
     buf = StringIO(pk)
     buf.seek(0)
     k = paramiko.RSAKey.from_private_key(buf)
-    scripts['/etc/id_rsa.pub'] = BytesIO(k.get_base64().encode())
+    scripts['/etc/id_rsa.pub'] = BytesIO(key.encode('utf8'))
     return scripts
 
 
