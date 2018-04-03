@@ -364,12 +364,14 @@ def generate_image(config):
     """
     scripts = dict()
     count = 0
-    for controller in config['controller']['hosts']:
+    for controller in config['nodes']:
+        if 'controller' not in controller['roles']:
+            continue
         # Add function to create directories
         script = BytesIO()
 
         # Add environment information
-        script.write(b'HOSTNAME=%s\n' % controller['hostname'].encode())
+        script.write(b'HOSTNAME=%s\n' % controller['name'].encode())
         script.write(b'DOMAIN=%s\n' % config['environment']['subdomain'].encode())
         script.write(b'MASK=%s\n' % config['network']['management']['network']
                      .split('/', 1)[1].encode())
