@@ -11,6 +11,7 @@ from collections import defaultdict
 import re
 import tarfile
 import hmac
+import base64
 import netaddr
 import flask
 from flask import jsonify, render_template, session, after_this_request, \
@@ -79,6 +80,16 @@ def authkey():
     Renders authentication key page
     """
     return render_template('downloads.html', menu=Menu("Downloads"))
+
+
+@app.route("/download/authtokenb85", methods=["POST"])
+@authenticated
+def downloadtoken_b85():
+    """
+    Generates download of auth token
+    """
+    payload = base64.b85encode(_generate_auth_token())
+    return payload
 
 
 @app.route("/download/authtoken", methods=["POST"])
