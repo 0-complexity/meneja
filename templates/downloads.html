@@ -8,6 +8,7 @@
     <h3>Select download type:</h3>
     <ul>
         <li><input id="auth_token" type="radio" name="type" checked><label for="auth_token">Authorization token</label></li>
+        <li><input id="auth_token_b85" type="radio" name="type" checked><label for="auth_token_b85">Copyable Authorization token</label></li>
         <li><input id="auth_usb_key" type="radio" name="type"><label for="auth_usb_key">Authorization usb key image</label></li>
         <li><input id="911boot" type="radio" name="type"><label for="911boot">911 boot / generic installer image</label></li>
     </ul>
@@ -32,13 +33,11 @@ var confpwd = document.getElementById('confpwd');
 var errormessage = document.getElementById('errormessage');
 var form = document.getElementById("form");
 var auth_token = document.getElementById("auth_token");
+var auth_token_b85 = document.getElementById("auth_token_b85");
 var auth_usb_key = document.getElementById("auth_usb_key");
 var nine_eleven_boot = document.getElementById("911boot");
 document.getElementById("download").addEventListener("click", function () {
     var checks = {
-        'Need at least two uppercase characters': /^.*[A-Z].*[A-Z].*$/,
-        'Need at least two digits': /^.*[0-9].*[0-9].*$/,
-        'Need at least three lowercase letters': /^.*[a-z].*[a-z].*[a-z].*$/,
         'Password must be at least 8 characters': /^.{8}.*$/
     };
     for (var error in checks) {
@@ -54,6 +53,20 @@ document.getElementById("download").addEventListener("click", function () {
     errormessage.innerText = "";
     if (auth_token.checked) {
         form.action = "/download/authtoken";
+    } else if (auth_token_b85.checked) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '/download/authtokenb85');
+        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        xhr.onload = function() {
+            if (xhr.status === 200) {
+                alert(xhr.responseText);
+            }
+            else if (xhr.status !== 200) {
+                alert('Request failed.  Returned status of ' + xhr.status);
+            }
+        };
+        xhr.send(encodeURI('pwd=' + pwd.value));
+        return;
     } else if (auth_usb_key.checked) {
         form.action = "/download/authkey";
     } else if (nine_eleven_boot.checked) {
