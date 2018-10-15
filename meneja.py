@@ -21,6 +21,7 @@ import requests
 import yaml
 import pycdlib
 from Crypto.Cipher import AES
+from OpenSSL import crypto
 import jsonschema
 import paramiko
 import threading
@@ -222,6 +223,10 @@ def validate(org, env):
     Validates the environment configuration
     """
     config = _get_config(org, env)
+    return jsonify(_validate_config(config))
+
+
+def _validate_config(config):
     response = requests.get('https://raw.githubusercontent.com/0-complexity/'
                             + 'openvcloud_installer/master/scripts/kubernetes/'
                             + 'config/config-validator.json')
@@ -245,8 +250,21 @@ def validate(org, env):
             missing_key = error.validator_value[-1] # pylint: disable=E1101
             message = ("Missing key in config at {tree}/{key}. Please check "
                        + "example config for reference.").format(key=missing_key, tree=tree)
-        return jsonify(dict(result="fail", error=message))
-    return jsonify(dict(result="ok"))
+        return dict(result="fail", error=message)
+    password = config['environment']['password']
+    if len(password) < 8:
+        return dict(result="fail", error='Password needs to be atleast 8 characters long have atleast one upper, lower case character and one number')
+    elif not (re.search('(?=.*[a-z])', password) and re.search('(?=.*[A-Z])', password) and re.search('(?=.*[0-9])', password)):
+        return dict(result="fail", error='Password needs to be atleast 8 characters long have atleast one upper, lower case character and one number')
+    certname = config['environment']['ssl']['root']
+    certificate = config['certificates'][certname]['crt']
+    cert = crypto.load_certificate(crypto.FILETYPE_PEM, certificate)
+    fqdn = "{subdomain}.{basedomain}".format(**config['environment'])
+    alloweddomains = cert.get_subject().commonName
+    alloweddomainre = alloweddomains.replace('.', '\.').replace('*', "[^\.]+")
+    if not re.match(alloweddomainre, fqdn):
+        return dict(result='fail', error="Certificate {} does not match domain {}".format(alloweddomains, fqdn))
+    return dict(result="ok")
 
 
 def _get_config(org, env, as_text=False):
@@ -289,12 +307,7 @@ def download(org, env):
     Generate and download usb stick image for a certain environment.
     """
     # Download yaml file from gitea
-    gitea_token = get_gitea_token()
-    url = "%s/api/v1/repos/%s/%s/raw/master/system-config.yaml?token=%s" \
-        % (app.config['args'].gitea, org, env, gitea_token)
-    with requests.get(url, stream=True) as response:
-        response.raise_for_status()
-        config = yaml.load(response.content)
+    config = _get_config(org, env)
     # Generate files
     files = generate_image(config)
     iso_filename = tempfile.mktemp()
@@ -404,6 +417,47 @@ def generate_image(config):
         script.write(b'GIGPWD=%s\n' % str(config['environment']['password']).encode())
         count += 1
         scripts['/etc/ctrl-0%s' % count] = script
+
+    fqdn = "{subdomain}.{basedomain}".format(**config['environment'])
+    certname = config['environment']['ssl']['root']
+    teleport = {
+      "auth_service": {
+          "enabled": "yes",
+          "authentication": {
+              "type": "github"
+          }
+      },
+      "proxy_service": {
+          "enabled": "yes",
+          "listen_addr": "0.0.0.0:3023",
+          "tunnel_listen_addr": "0.0.0.0:3024",
+          "web_listen_addr": "0.0.0.0:3080",
+          "https_key_file": "/etc/ssl/{}.key".format(certname),
+          "https_cert_file": "/etc/ssl/{}.crt".format(certname),
+      }
+    }
+
+    github = {
+        "kind": "github",
+        "version": "v3",
+        "metadata": {
+            "name": "github"
+        },
+        "spec": {
+            "client_id": config['support']['github']['client_id'],
+            "client_secret": config['support']['github']['client_secret'],
+            "display": "Github",
+            "redirect_url": "https://{}:3080/v1/webapi/github/callback".format(fqdn),
+            "teams_to_login": []
+        }
+    }
+    for team in config['support']['github']['teams']:
+        github['spec']['teams_to_login'].append({'team': team['team_name'], 'organization': 'org_name', 'logins': ['root']})
+
+    scripts['/teleport/certs/{}.crt'.format(certname)] = BytesIO(config['certificates'][certname]['crt'].encode('utf8'))
+    scripts['/teleport/certs/{}.key'.format(certname)] = BytesIO(config['certificates'][certname]['key'].encode('utf8'))
+    scripts['/teleport/teleport.yaml'] = BytesIO(yaml.dump(teleport).encode('utf8'))
+    scripts['/teleport/github.yaml'] = BytesIO(yaml.dump(github).encode('utf8'))
     pk = config['ssh']['private-key'].strip()
     buf = StringIO(pk)
     buf.seek(0)
