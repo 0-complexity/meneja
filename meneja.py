@@ -23,6 +23,7 @@ import pycdlib
 from Crypto.Cipher import AES
 from OpenSSL import crypto
 import jsonschema
+import shutil
 import paramiko
 import threading
 
@@ -322,9 +323,10 @@ def download(org, env):
 
 def _generate_iso(files, iso_filename):
     with GENERATE_LOCK:
+        extrapath = os.path.join(app.config['args'].iso_template, 'extra')
         try:
             for filename, contents in files.items():
-                target_filename = "%s%s" % (app.config['args'].iso_template, filename)
+                target_filename = "%s%s" % (extrapath, filename)
                 dir_name = os.path.dirname(target_filename)
                 os.makedirs(dir_name, exist_ok=True)
                 with open(target_filename, 'wb') as fileh:
@@ -334,10 +336,7 @@ def _generate_iso(files, iso_filename):
             if result.returncode != 0:
                 raise RuntimeError("Failed to build iso!\n%s\n%s" % (result.stdout, result.stderr))
         finally:
-            for filename, contents in files.items():
-                target_filename = "%s%s" % (app.config['args'].iso_template, filename)
-                if os.path.exists(target_filename):
-                    os.remove(target_filename)
+            shutil.rmtree(extrapath)
 
 
 def get_gitea_token():
@@ -446,13 +445,13 @@ def generate_image(config):
         "spec": {
             "client_id": config['support']['github']['client_id'],
             "client_secret": config['support']['github']['client_secret'],
-            "display": "Github",
+            "display": "GitHub",
             "redirect_url": "https://{}:3080/v1/webapi/github/callback".format(fqdn),
-            "teams_to_login": []
+            "teams_to_logins": []
         }
     }
     for team in config['support']['github']['teams']:
-        github['spec']['teams_to_login'].append({'team': team['team_name'], 'organization': 'org_name', 'logins': ['root']})
+        github['spec']['teams_to_logins'].append({'team': team['team_name'], 'organization': team['org_name'], 'logins': ['root']})
 
     scripts['/teleport/certs/{}.crt'.format(certname)] = BytesIO(config['certificates'][certname]['crt'].encode('utf8'))
     scripts['/teleport/certs/{}.key'.format(certname)] = BytesIO(config['certificates'][certname]['key'].encode('utf8'))
